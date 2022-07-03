@@ -2,7 +2,6 @@
   "name": "vote-bot",
   "version": "1.0.0",
   "main": "bot.js",
-  "devDependencies": {},
   "scripts": {
     "start": "node bot.js"
   },
@@ -11,6 +10,9 @@
   "license": "ISC",
   "description": "Bot for vote",
   "dependencies": {
-    "puppeteer-extra": "^3.3.0"
+    "dotenv": "^16.0.1",
+    "puppeteer-extra": "^3.3.0",
+    "puppeteer-extra-plugin-adblocker": "^2.13.0",
+    "puppeteer-extra-plugin-stealth": "^2.10.1"
   }
 }
