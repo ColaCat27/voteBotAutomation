@@ -1,0 +1,16 @@
+{
+  "name": "vote-bot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "devDependencies": {},
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "keywords": [],
+  "author": "Cyber Cat",
+  "license": "ISC",
+  "description": "Bot for vote",
+  "dependencies": {
+    "puppeteer-extra": "^3.3.0"
+  }
+}
