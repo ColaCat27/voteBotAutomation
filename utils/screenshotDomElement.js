@@ -1,4 +1,9 @@
-module.exports.screenshotDOMElement = (selector, padding = 0) => {
+module.exports.screenshotDOMElement = async (
+  selector,
+  fileName,
+  page,
+  padding = 0
+) => {
   const rect = await page.evaluate((selector) => {
     const element = document.querySelector(selector);
     const { x, y, width, height } = element.getBoundingClientRect();
@@ -6,7 +11,7 @@ module.exports.screenshotDOMElement = (selector, padding = 0) => {
   }, selector);
 
   return await page.screenshot({
-    path: "./element.png",
+    path: `${__dirname}/../captchaImages/${fileName}.png`,
     clip: {
       x: rect.left - padding,
       y: rect.top - padding,
@@ -14,4 +19,4 @@ module.exports.screenshotDOMElement = (selector, padding = 0) => {
       height: rect.height + padding * 2,
     },
   });
-}
+};

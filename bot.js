@@ -8,7 +8,8 @@ const {
   getTaskResult,
   getBalance,
 } = require("./captcha/captchaImage");
-const { screenshotDOMElement } = require("./screenshotDomElement");
+const { screenshotDOMElement } = require("./utils/screenshotDomElement");
+const { randomString } = require("./utils/randomString");
 
 require("dotenv").config();
 
@@ -42,15 +43,27 @@ puppeteer
       console.log("Captcha finded");
     });
 
-    const imageBase64 = await screenshotDOMElement("#captcha").then(() => {
-      let imageBase64 = fs.readFileSync("./element.png");
+    let fileName = await randomString(5);
+
+    while (fs.existsSync(`${__dirname}/captchaImages/${fileName}.png`)) {
+      fileName = await randomString(5);
+    }
+
+    const imageBase64 = await screenshotDOMElement(
+      "#captcha",
+      fileName,
+      page
+    ).then(() => {
+      let imageBase64 = fs.readFileSync(
+        `${__dirname}/captchaImages/${fileName}.png`
+      );
       return Buffer.from(imageBase64, "base64").toString("base64");
     });
 
-    let taskId = await createTask(settings.apiKey, imageBase64);
-    await page.waitForTimeout("4000");
-    console.log(`Try get captcha result`);
-    await getTaskResult(settings.apiKey, taskId);
+    // let taskId = await createTask(settings.apiKey, imageBase64);
+    // await page.waitForTimeout("4000");
+    // console.log(`Try get captcha result`);
+    // await getTaskResult(settings.apiKey, taskId);
 
     // await browser.close();
   });
