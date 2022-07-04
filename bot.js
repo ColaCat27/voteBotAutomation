@@ -64,8 +64,6 @@ puppeteer
       return Buffer.from(imageBase64, "base64").toString("base64");
     });
 
-    console.log(`Base64: ${imageBase64}`);
-
     let taskId = await createTask(settings.apiKey, imageBase64);
     console.log(`Task id: ${taskId}`);
     let isError = null;
@@ -74,26 +72,31 @@ puppeteer
     await page.waitForTimeout("4000");
 
     while (captchaResult == "processing" && isError === null) {
-      let response = await getTaskResult(settings.apiKey, taskId);
+      let { errorId, status, solution } = await getTaskResult(
+        settings.apiKey,
+        taskId
+      );
 
-      console.log(`Response: ${response}`);
-      captchaResult = "ready";
+      console.log(
+        `ErrorId: ${errorId}\nStatus: ${status}\nSolution: ${solution.text}`
+      );
 
-      // if (errorId == 1) {
-      //   isError = "error";
-      //   console.log(isError);
-      // }
+      if (errorId == 1) {
+        isError = "error";
+        console.log(isError);
+      }
 
-      // if (status != "processing") {
-      //   captchaResult = solution;
-      // } else {
-      //   captchaResult = status;
-      // }
+      if (status != "processing") {
+        console.log(solution.text);
+        captchaResult = solution.text;
+      } else {
+        captchaResult = status;
+      }
 
       await page.waitForTimeout("4000");
     }
 
-    console.log(`Captcha result: ${captchaResult}`);
-
+    await page.type("input[name=captcha_code]", captchaResult);
+    await page.click("input[name=ticki]");
     // await browser.close();
   });

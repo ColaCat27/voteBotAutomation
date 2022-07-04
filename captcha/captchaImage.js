@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 module.exports.createTask = async (apiKey, imageBase64) => {
-  await axios
+  return await axios
     .post("https://api.capmonster.cloud/createTask", {
       clientKey: apiKey,
       task: {
@@ -10,7 +10,6 @@ module.exports.createTask = async (apiKey, imageBase64) => {
       },
     })
     .then((response) => {
-      console.log(response.data.taskId);
       return response.data.taskId;
     })
     .catch((err) => {
@@ -19,7 +18,7 @@ module.exports.createTask = async (apiKey, imageBase64) => {
 };
 
 module.exports.getTaskResult = async (apiKey, taskId) => {
-  await axios
+  return await axios
     .post("https://api.capmonster.cloud/getTaskResult", {
       clientKey: apiKey,
       taskId: taskId,
@@ -33,7 +32,7 @@ module.exports.getTaskResult = async (apiKey, taskId) => {
 };
 
 module.exports.getBalance = async (apiKey) => {
-  await axios
+  return await axios
     .post("https://api.capmonster.cloud/getBalance", {
       clientKey: apiKey,
     })
