@@ -3,7 +3,12 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const fs = require("fs");
 const axios = require("axios");
-const solveImageCaptcha = require("./captcha/captchaImage");
+const {
+  createTask,
+  getTaskResult,
+  getBalance,
+} = require("./captcha/captchaImage");
+const { screenshotDOMElement } = require("./screenshotDomElement");
 
 require("dotenv").config();
 
@@ -18,6 +23,7 @@ const settings = {
   threads: parseInt(process.env.THREADS),
   proxyPath: process.env.PROXY_PATH,
   targetLink: process.env.TARGET_SITE,
+  apiKey: process.env.CAPTCHA_API,
 };
 
 puppeteer
@@ -35,46 +41,16 @@ puppeteer
     await page.waitForSelector("#captcha", { visible: true }).then(() => {
       console.log("Captcha finded");
     });
-    // const captcha = await page.$eval("#captcha", (el) => el.src);
-    // console.log(`Captcha link: ${captcha}`);
 
-    async function screenshotDOMElement(selector, padding = 0) {
-      const rect = await page.evaluate((selector) => {
-        const element = document.querySelector(selector);
-        const { x, y, width, height } = element.getBoundingClientRect();
-        return { left: x, top: y, width, height, id: element.id };
-      }, selector);
+    const imageBase64 = await screenshotDOMElement("#captcha").then(() => {
+      let imageBase64 = fs.readFileSync("./element.png");
+      return Buffer.from(imageBase64, "base64").toString("base64");
+    });
 
-      return await page.screenshot({
-        path: "./element.png",
-        clip: {
-          x: rect.left - padding,
-          y: rect.top - padding,
-          width: rect.width + padding * 2,
-          height: rect.height + padding * 2,
-        },
-      });
-    }
+    let taskId = await createTask(settings.apiKey, imageBase64);
+    await page.waitForTimeout("4000");
+    console.log(`Try get captcha result`);
+    await getTaskResult(settings.apiKey, taskId);
 
-    await screenshotDOMElement("#captcha");
-
-    const base64 = fs.readFileSync("./element.png");
-    // await solveCaptchaImage(base64);
-
-    // const downloadImage = (url, image_path) =>
-    //   axios({
-    //     url,
-    //     responseType: "stream",
-    //   }).then(
-    //     (response) =>
-    //       new Promise((resolve, reject) => {
-    //         response.data
-    //           .pipe(fs.createWriteStream(image_path))
-    //           .on("finish", () => resolve())
-    //           .on("error", (e) => reject(e));
-    //       })
-    //   );
-
-    // downloadImage(captcha, "./captchas/");
     // await browser.close();
   });
