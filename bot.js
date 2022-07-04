@@ -45,6 +45,10 @@ puppeteer
 
     let fileName = await randomString(5);
 
+    if (!fs.existsSync(`${__dirname}/captchaImages/`)) {
+      fs.mkdirSync(`${__dirname}/captchaImages/`);
+    }
+
     while (fs.existsSync(`${__dirname}/captchaImages/${fileName}.png`)) {
       fileName = await randomString(5);
     }
@@ -60,10 +64,36 @@ puppeteer
       return Buffer.from(imageBase64, "base64").toString("base64");
     });
 
-    // let taskId = await createTask(settings.apiKey, imageBase64);
-    // await page.waitForTimeout("4000");
-    // console.log(`Try get captcha result`);
-    // await getTaskResult(settings.apiKey, taskId);
+    console.log(`Base64: ${imageBase64}`);
+
+    let taskId = await createTask(settings.apiKey, imageBase64);
+    console.log(`Task id: ${taskId}`);
+    let isError = null;
+    let captchaResult = "processing";
+
+    await page.waitForTimeout("4000");
+
+    while (captchaResult == "processing" && isError === null) {
+      let response = await getTaskResult(settings.apiKey, taskId);
+
+      console.log(`Response: ${response}`);
+      captchaResult = "ready";
+
+      // if (errorId == 1) {
+      //   isError = "error";
+      //   console.log(isError);
+      // }
+
+      // if (status != "processing") {
+      //   captchaResult = solution;
+      // } else {
+      //   captchaResult = status;
+      // }
+
+      await page.waitForTimeout("4000");
+    }
+
+    console.log(`Captcha result: ${captchaResult}`);
 
     // await browser.close();
   });

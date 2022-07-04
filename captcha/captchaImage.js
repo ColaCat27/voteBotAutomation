@@ -25,11 +25,7 @@ module.exports.getTaskResult = async (apiKey, taskId) => {
       taskId: taskId,
     })
     .then((response) => {
-      if (response.res.statusCode === 200) {
-        return response.data.taskId;
-      } else {
-        console.log(`Status code: ${response.res.statusCode}`);
-      }
+      return response.data;
     })
     .catch((err) => {
       console.log(err);
