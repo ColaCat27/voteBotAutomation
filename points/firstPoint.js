@@ -3,8 +3,11 @@ const {screenshotDOMElement} = require('../utils/screenshotDomElement');
 const {createTask, getTaskResult, getBalance} = require('../utils/solveImageCaptcha')
 
 
-module.exports.firstPoint = async () => {
+module.exports.firstPoint = async (page) => {
    return await new Promise((resolve, reject) => {
+    await page.waitForSelector("#captcha", { visible: true }).then(() => {
+      console.log("Captcha finded");
+    });
     let fileName = await prepareDir(); //Проверяем создана ли директория для хранения капчи, а также сущесвует ли файл с будующим названием картинки с капчей
 
     //скрин капчи сохранение и чтение в base64

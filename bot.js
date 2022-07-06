@@ -47,13 +47,11 @@ puppeteer
     //const frame = await page.mainFrame().childFrames()[1]; (Способ взаимодействовать с фреймом)
 
     await page.goto(settings.targetLink);
-    await page.waitForSelector("#captcha", { visible: true }).then(() => {
-      console.log("Captcha finded");
-    });
 
-    await firstPoint();
+    await firstPoint(page); //в случае неудачи в решении капчи возвращаемся сюда
 
     //Переход к следующей странице
+
     fs.unlinkSync(`${__dirname}/captchaImages/${fileName}.png`); //удаление скачаной капчи
 
     try {
