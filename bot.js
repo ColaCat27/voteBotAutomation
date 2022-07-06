@@ -1,8 +1,6 @@
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
-const fs = require("fs");
-const axios = require("axios");
 const { firstPoint } = require("./points/firstPoint");
 
 require("dotenv").config();
@@ -48,24 +46,63 @@ puppeteer
 
     await page.goto(settings.targetLink);
 
-    await firstPoint(page); //в случае неудачи в решении капчи возвращаемся сюда
-
-    //Переход к следующей странице
-
-    fs.unlinkSync(`${__dirname}/captchaImages/${fileName}.png`); //удаление скачаной капчи
+    await firstPoint(page, settings);
+    let isExist;
 
     try {
-      await page.waitForXPath("//span[contains(text(), 'Please try again!')]"); //поиск ошибки решения первой капчи
-    } catch (err) {
-      console.log(err);
+      isExist = await page.waitForXPath(
+        "//span[contains(text(), 'Please try again!')]",
+        {
+          //поиск ошибки решения первой капчи
+          timeout: 4500,
+        }
+      );
+    } catch {}
+
+    if (isExist) {
+      await firstPoint(page, settings);
+      return;
     }
 
-    //Решение hcaptcha капчи
-    // console.log("Start solving captcha");
-    // await page.solveRecaptchas();
+    try {
+      isExist = await page.waitForXPath("//div[@id='cf-hcaptcha-container']", {
+        timeout: 3000,
+      });
+    } catch {}
 
+    if (isExist) {
+      console.log("Начинаю разгадывание hcaptcha");
+
+      await page.solveRecaptchas();
+      console.log("Капча решена");
+      await page.waitForNavigation();
+      // const frame = await page.mainFrame().childFrames()[1]; //(Способ взаимодействовать с фреймом)
+      // await Promise.all([page.waitForNavigation(), frame.click(`#checkbox`)]);
+    }
+
+    button = await page.waitForXPath("//div[@id='cf-norobot-container']");
+
+    if (button) {
+      await button.click();
+    }
+
+    try {
+      isExist = await page.waitForXPath("//div[@id='middleba']", {
+        timeout: 3000,
+        visible: true,
+      });
+    } catch {}
+
+    if (!isExist) {
+      console.log("Не удалось проголосовать пытаюсь еще раз");
+      await page.goto(settings.targetLink);
+
+      await firstPoint(page, settings);
+      return;
+    } else {
+      console.log("Успешно проголосовал за сервер");
+      await browser.close();
+    }
     // await Promise.all([page.waitForNavigation(), page.click(".btn-install")]);
-    //-------------------------------------------------------------------------
-
-    // await browser.close();
+    // -------------------------------------------------------------------------
   });
