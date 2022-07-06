@@ -3,13 +3,7 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
 const fs = require("fs");
 const axios = require("axios");
-const {
-  createTask,
-  getTaskResult,
-  getBalance,
-} = require("./captcha/captchaImage");
-const { screenshotDOMElement } = require("./utils/screenshotDomElement");
-const { randomString } = require("./utils/randomString");
+const { firstPoint } = require("./points/firstPoint");
 
 require("dotenv").config();
 
@@ -17,6 +11,24 @@ puppeteer.use(StealthPlugin());
 puppeteer.use(
   AdblockerPlugin({
     blockTrackers: true,
+  })
+);
+
+const {
+  default: RecaptchaPlugin,
+  BuiltinSolutionProviders,
+} = require("puppeteer-extra-plugin-recaptcha");
+const CapMonsterProvider = require("puppeteer-extra-plugin-recaptcha-capmonster");
+
+CapMonsterProvider.use(BuiltinSolutionProviders);
+
+puppeteer.use(
+  RecaptchaPlugin({
+    provider: {
+      id: "capmonster",
+      token: process.env.CAPTCHA_API, // REPLACE THIS WITH YOUR OWN CAPMONSTER API KEY ⚡
+    },
+    visualFeedback: true, // colorize reCAPTCHAs (violet = detected, green = solved)
   })
 );
 
@@ -28,75 +40,34 @@ const settings = {
 };
 
 puppeteer
-  .launch({
-    headless: false,
-    args: ["--start-maximized"],
-    ignoreDefaultArgs: ["--enable-automation"],
-    waitUntil: "networkidle2",
-  })
+  .launch({ headless: false, ignoreDefaultArgs: ["--enable-automation"] })
   .then(async (browser) => {
     const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
+
+    //const frame = await page.mainFrame().childFrames()[1]; (Способ взаимодействовать с фреймом)
 
     await page.goto(settings.targetLink);
     await page.waitForSelector("#captcha", { visible: true }).then(() => {
       console.log("Captcha finded");
     });
 
-    let fileName = await randomString(5);
+    await firstPoint();
 
-    if (!fs.existsSync(`${__dirname}/captchaImages/`)) {
-      fs.mkdirSync(`${__dirname}/captchaImages/`);
+    //Переход к следующей странице
+    fs.unlinkSync(`${__dirname}/captchaImages/${fileName}.png`); //удаление скачаной капчи
+
+    try {
+      await page.waitForXPath("//span[contains(text(), 'Please try again!')]"); //поиск ошибки решения первой капчи
+    } catch (err) {
+      console.log(err);
     }
 
-    while (fs.existsSync(`${__dirname}/captchaImages/${fileName}.png`)) {
-      fileName = await randomString(5);
-    }
+    //Решение hcaptcha капчи
+    // console.log("Start solving captcha");
+    // await page.solveRecaptchas();
 
-    const imageBase64 = await screenshotDOMElement(
-      "#captcha",
-      fileName,
-      page
-    ).then(() => {
-      let imageBase64 = fs.readFileSync(
-        `${__dirname}/captchaImages/${fileName}.png`
-      );
-      return Buffer.from(imageBase64, "base64").toString("base64");
-    });
+    // await Promise.all([page.waitForNavigation(), page.click(".btn-install")]);
+    //-------------------------------------------------------------------------
 
-    let taskId = await createTask(settings.apiKey, imageBase64);
-    console.log(`Task id: ${taskId}`);
-    let isError = null;
-    let captchaResult = "processing";
-
-    await page.waitForTimeout("4000");
-
-    while (captchaResult == "processing" && isError === null) {
-      let { errorId, status, solution } = await getTaskResult(
-        settings.apiKey,
-        taskId
-      );
-
-      console.log(
-        `ErrorId: ${errorId}\nStatus: ${status}\nSolution: ${solution.text}`
-      );
-
-      if (errorId == 1) {
-        isError = "error";
-        console.log(isError);
-      }
-
-      if (status != "processing") {
-        console.log(solution.text);
-        captchaResult = solution.text;
-      } else {
-        captchaResult = status;
-      }
-
-      await page.waitForTimeout("4000");
-    }
-
-    await page.type("input[name=captcha_code]", captchaResult);
-    await page.click("input[name=ticki]");
     // await browser.close();
   });
