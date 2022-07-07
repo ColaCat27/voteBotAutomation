@@ -1,4 +1,5 @@
 const input = require("input");
+const fs = require("fs");
 
 module.exports.initSettings = async () => {
   const settings = {};

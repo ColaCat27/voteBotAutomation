@@ -41,7 +41,7 @@ puppeteer.use(
 
   const cluster = await Cluster.launch({
     concurrency: Cluster.CONCURRENCY_CONTEXT,
-    maxConcurrency: settings.threads,
+    maxConcurrency: parseInt(settings.threads),
     puppeteerOptions: {
       headless: false,
       ignoreDefaultArgs: ["--enable-automation"],
@@ -49,8 +49,7 @@ puppeteer.use(
   });
 
   await cluster.task(async ({ page, data: url }) => {
-    const page = await browser.newPage();
-    await page.goto(settings.targetLink);
+    await page.goto(url);
     await firstPoint(page, settings);
     let isExist;
     try {
@@ -103,7 +102,7 @@ puppeteer.use(
     }
   });
 
-  for (let i = 0; i < settings.executions; i++) {
-    cluster.queue("http://www.google.com/");
+  for (let i = 0; i < parseInt(settings.executions); i++) {
+    cluster.queue(settings.targetLink);
   }
 })();
