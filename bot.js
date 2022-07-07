@@ -7,39 +7,40 @@ const { initSettings } = require("./settings/settings");
 
 require("dotenv").config();
 
-puppeteer.use(StealthPlugin());
-puppeteer.use(
-  AdblockerPlugin({
-    blockTrackers: true,
-  })
-);
-
-const {
-  default: RecaptchaPlugin,
-  BuiltinSolutionProviders,
-} = require("puppeteer-extra-plugin-recaptcha");
-const CapMonsterProvider = require("puppeteer-extra-plugin-recaptcha-capmonster");
-
-CapMonsterProvider.use(BuiltinSolutionProviders);
-
-puppeteer.use(
-  RecaptchaPlugin({
-    provider: {
-      id: "capmonster",
-      token: process.env.CAPTCHA_API, // REPLACE THIS WITH YOUR OWN CAPMONSTER API KEY ⚡
-    },
-    visualFeedback: true, // colorize reCAPTCHAs (violet = detected, green = solved)
-  })
-);
-
 (async () => {
   //Set settings
 
   const settings = await initSettings();
 
+  puppeteer.use(StealthPlugin());
+  puppeteer.use(
+    AdblockerPlugin({
+      blockTrackers: true,
+    })
+  );
+
+  const {
+    default: RecaptchaPlugin,
+    BuiltinSolutionProviders,
+  } = require("puppeteer-extra-plugin-recaptcha");
+  const CapMonsterProvider = require("puppeteer-extra-plugin-recaptcha-capmonster");
+
+  CapMonsterProvider.use(BuiltinSolutionProviders);
+
+  puppeteer.use(
+    RecaptchaPlugin({
+      provider: {
+        id: "capmonster",
+        token: settings.apiKey, // REPLACE THIS WITH YOUR OWN CAPMONSTER API KEY ⚡
+      },
+      visualFeedback: true, // colorize reCAPTCHAs (violet = detected, green = solved)
+    })
+  );
+
   //Cluster
   const cluster = await Cluster.launch({
-    concurrency: Cluster.CONCURRENCY_CONTEXT,
+    puppeteer: puppeteer,
+    concurrency: Cluster.CONCURRENCY_PAGE,
     maxConcurrency: parseInt(settings.threads),
     puppeteerOptions: {
       headless: false,
@@ -47,8 +48,21 @@ puppeteer.use(
     },
   });
 
+  cluster.on("taskerror", (err, data, willRetry) => {
+    if (willRetry) {
+      console.warn(
+        `Encountered an error while crawling ${data}. ${err.message}\nThis job will be retried`
+      );
+    } else {
+      console.error(`Failed to crawl ${data}: ${err.message}`);
+    }
+  });
+
   await cluster.task(async ({ page, data: url }) => {
-    await page.goto(url);
+    await page.goto(url, {
+      waitUntil: "load",
+      timeout: 0,
+    });
     await firstPoint(page, settings);
     let isExist;
     try {
@@ -73,7 +87,6 @@ puppeteer.use(
       console.log("Начинаю разгадывание hcaptcha");
       await page.solveRecaptchas();
       console.log("Капча решена");
-      await page.waitForNavigation();
       // const frame = await page.mainFrame().childFrames()[1]; //(Способ взаимодействовать с фреймом)
       // await Promise.all([page.waitForNavigation(), frame.click(`#checkbox`)]);
     }
@@ -97,12 +110,12 @@ puppeteer.use(
       return;
     } else {
       console.log("Успешно проголосовал за сервер");
-      await cluster.idle();
-      await cluster.close();
+      // await cluster.idle();
+      // await cluster.close();
     }
   });
 
   for (let i = 0; i < parseInt(settings.executions); i++) {
-    cluster.queue(settings.targetLink);
+    await cluster.queue(settings.targetLink);
   }
 })();

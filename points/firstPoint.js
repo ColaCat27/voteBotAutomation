@@ -55,10 +55,10 @@ module.exports.firstPoint = async (page, settings) => {
       captchaResult = status;
     }
 
-    await page.waitForTimeout("4000"); // задержка после решения капчи
+    // await page.waitForTimeout("3000"); // задержка после решения капчи
   }
 
-  await page.type("input[name=captcha_code]", captchaResult + "123");
+  await page.type("input[name=captcha_code]", captchaResult);
   await page.click("input[name=ticki]"); //подтверждаем ввод первой капчи
 
   fs.unlinkSync(`${__dirname}/../captchaImages/${fileName}.png`); //удаление скачаной капчи
