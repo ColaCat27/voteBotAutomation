@@ -38,7 +38,6 @@ puppeteer.use(
   const settings = await initSettings();
 
   //Cluster
-
   const cluster = await Cluster.launch({
     concurrency: Cluster.CONCURRENCY_CONTEXT,
     maxConcurrency: parseInt(settings.threads),
@@ -98,7 +97,8 @@ puppeteer.use(
       return;
     } else {
       console.log("Успешно проголосовал за сервер");
-      await browser.close();
+      await cluster.idle();
+      await cluster.close();
     }
   });
 
